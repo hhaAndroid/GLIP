@@ -1,0 +1,14 @@
+不能用 pytorch 1.10 及其高版本，因为 maskrcnn_benchamrk 不支持，如果要想成功需要修改不少代码。
+目前用 pytorch1.9
+
+pip install nltk
+pip install inflect
+
+export DATASET=/home/PJLAB/huanghaian/dataset/coco
+
+python tools/test_grounding_net.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight glip_a_tiny_o365.pth \
+        TEST.IMS_PER_BATCH 1 \
+        MODEL.DYHEAD.SCORE_AGG "MEAN" \
+        TEST.EVAL_TASK detection \
+        MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS False \
+        OUTPUT_DIR output
