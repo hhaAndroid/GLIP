@@ -1,5 +1,7 @@
 不能用 pytorch 1.10 及其高版本，因为 maskrcnn_benchamrk 不支持，如果要想成功需要修改不少代码。
-目前用 pytorch1.9
+目前用 pytorch1.8 cuda 10.1 gcc5.4
+
+export PATH=/usr/local/cuda-10.1/bin/:$PATH
 
 pip install nltk
 pip install inflect

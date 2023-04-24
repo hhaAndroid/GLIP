@@ -195,12 +195,12 @@ class GLIPDemo(object):
             tokens_positive = [tokens_positive]
 
             original_caption = caption_string
-            print(tokens_positive)
+            # print(tokens_positive)
         else:
             tokenized = self.tokenizer([original_caption], return_tensors="pt")
             if custom_entity is None:
                 tokens_positive = self.run_ner(original_caption)
-            print(tokens_positive)
+            # print(tokens_positive)
         # process positive map
         positive_map = create_positive_map(tokenized, tokens_positive)
 
@@ -288,6 +288,7 @@ class GLIPDemo(object):
     def overlay_boxes(self, image, predictions, alpha=0.5, box_pixel = 3):
         labels = predictions.get_field("labels")
         boxes = predictions.bbox
+        print(boxes)
 
         colors = self.compute_colors_for_labels(labels).tolist()
         new_image = image.copy()

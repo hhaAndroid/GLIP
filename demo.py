@@ -25,6 +25,8 @@ def imshow(img, caption):
     plt.figtext(0.5, 0.09, caption, wrap=True, horizontalalignment='center', fontsize=20)
     plt.show()
 
+def imsave(img, path):
+    plt.imsave(path, img[:, :, [2, 1, 0]])
 
 # config_file = "configs/pretrain/glip_Swin_T_O365_GoldG.yaml"
 # weight_file = "glip_tiny_model_o365_goldg_cc_sbu.pth"
@@ -47,8 +49,8 @@ glip_demo = GLIPDemo(
 image = load('9472793441_b7822c00de_z.jpg')
 caption = 'bobble heads on top of the shelf'
 result, _ = glip_demo.run_on_web_image(image, caption, 0.5)
-imshow(result, caption)
+imsave(result, 'cat_remote.jpg')
 
-caption = 'sofa . remote . dog . person . car . sky . plane .' # the caption can also be the simple concatonation of some random categories.
-result, _ = glip_demo.run_on_web_image(image, caption, 0.5)
-imshow(result, caption)
+# caption = 'sofa . remote . dog . person . car . sky . plane .' # the caption can also be the simple concatonation of some random categories.
+# result, _ = glip_demo.run_on_web_image(image, caption, 0.5)
+# imshow(result, caption)
