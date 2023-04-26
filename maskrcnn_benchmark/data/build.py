@@ -98,7 +98,7 @@ def build_dataset(cfg, dataset_list, transforms, dataset_catalog, is_train=True,
 
         print(dataset_name, 'has the {} data points'.format(len(dataset)), data["factory"])
 
-        if class_concat:
+        if class_concat: # false
             category = list(dataset.contiguous_category_id_to_json_id.values())
             dataset.contiguous_category_id_to_json_id = {}
             dataset.json_category_id_to_contiguous_id = {}
@@ -254,7 +254,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, num_replicas=None
         shuffle = True
         num_iters = cfg.SOLVER.MAX_ITER
     else:
-        images_per_batch = cfg.TEST.IMS_PER_BATCH
+        images_per_batch = cfg.TEST.IMS_PER_BATCH  # 总的 BS 数
         assert (
                 images_per_batch % num_gpus == 0
         ), "TEST.IMS_PER_BATCH ({}) must be divisible by the number "
@@ -302,7 +302,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, num_replicas=None
             DatasetCatalog.set(new_dataset, attrs)
 
 
-    dataset_list = cfg.DATASETS.TRAIN if is_train else cfg.DATASETS.TEST
+    dataset_list = cfg.DATASETS.TRAIN if is_train else cfg.DATASETS.TEST  # coco_2017_val
 
     # Haotian: expand bing dataset
     if "bing_caption_train" in dataset_list and len(cfg.DATASETS.BING_INDEX_LIST) > 0:
@@ -394,7 +394,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, num_replicas=None
     if is_train:
         extra_args["diver_box_for_vqa"] = cfg.DATASETS.DIVER_BOX_FOR_VQA
     extra_args["caption_prompt"] = cfg.DATASETS.CAPTION_PROMPT
-    extra_args["use_caption_prompt"] = cfg.DATASETS.USE_CAPTION_PROMPT
+    extra_args["use_caption_prompt"] = cfg.DATASETS.USE_CAPTION_PROMPT # false
 
     # extra_args['tokenizer'] = AutoTokenizer.from_pretrained(cfg.MODEL.LANGUAGE_BACKBONE.TOKENIZER_TYPE)
     if cfg.MODEL.LANGUAGE_BACKBONE.TOKENIZER_TYPE == "clip":
@@ -415,7 +415,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, num_replicas=None
     else:
         datasets = build_dataset(cfg, dataset_list, transforms, DatasetCatalog, is_train,
                                  class_concat=cfg.DATASETS.CLASS_CONCAT,
-                                 extra_args=extra_args)
+                                 extra_args=extra_args) # xxx
 
     data_loaders = []
     for di, dataset in enumerate(datasets):

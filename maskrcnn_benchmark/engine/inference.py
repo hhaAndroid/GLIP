@@ -423,7 +423,7 @@ def inference(
         all_queries = [[categories[k] for k in keys]]
         all_positive_map_label_to_token = [{k: [i] for i, k in enumerate(keys)}]
     elif task == "detection":
-        all_queries, all_positive_map_label_to_token = create_queries_and_maps_from_dataset(dataset, cfg)
+        all_queries, all_positive_map_label_to_token = create_queries_and_maps_from_dataset(dataset, cfg) # true
     elif task == "grounding":
         all_queries = [None]
         all_positive_map_label_to_token = [None]
@@ -455,7 +455,7 @@ def inference(
         all_output = []
         mdetr_style_output = []
         with torch.no_grad():
-            if cfg.TEST.USE_MULTISCALE:
+            if cfg.TEST.USE_MULTISCALE: # false
                 query_time = len(all_queries)
                 for query_i in range(query_time):
                     if task == "detection":

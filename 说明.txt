@@ -45,9 +45,14 @@ RPN: 实际上就是 RetinaNet 的 Head 部分 -- VLDYHEAD
 评估
 ln -s /home/PJLAB/huanghaian/dataset/coco1/ coco
 
-python tools/test_grounding_net.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight glip_a_tiny_o365.pth \
+python tools/tgrounding_net_test.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight glip_a_tiny_o365.pth OUTPUT_DIR aa
+
+python tools/tgrounding_net_test.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight /home/huanghaian/glip_a_tiny_o365.pth \
         TEST.IMS_PER_BATCH 1 \
-        MODEL.DYHEAD.SCORE_AGG "MEAN" \
         TEST.EVAL_TASK detection \
-        MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS False \
+        OUTPUT_DIR aa
+
+python -m torch.distributed.launch --nproc_per_node 8 --world-size 8 tools/tgrounding_net_test.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight /home/huanghaian/glip_a_tiny_o365.pth \
+        TEST.IMS_PER_BATCH 8 \
+        TEST.EVAL_TASK detection \
         OUTPUT_DIR aa
