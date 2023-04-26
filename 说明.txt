@@ -52,7 +52,21 @@ python tools/tgrounding_net_test.py --config-file configs/pretrain/glip_A_Swin_T
         TEST.EVAL_TASK detection \
         OUTPUT_DIR aa
 
-python -m torch.distributed.launch --nproc_per_node 8 tools/tgrounding_net_test.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight /home/huanghaian/glip_a_tiny_o365.pth \
+python -m torch.distributed.launch --nproc_per_node 8 tools/grounding_net_test.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight /home/huanghaian/glip_a_tiny_o365.pth \
         TEST.IMS_PER_BATCH 8 \
         TEST.EVAL_TASK detection \
         OUTPUT_DIR aa
+
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.429
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.593
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.470
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.304
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.477
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.533
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.363
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.603
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.637
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.477
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.692
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.790
+
