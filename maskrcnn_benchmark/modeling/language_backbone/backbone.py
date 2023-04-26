@@ -10,7 +10,7 @@ from . import word_utils
 
 
 @registry.LANGUAGE_BACKBONES.register("bert-base-uncased")
-def build_bert_backbone(cfg):
+def build_bert_backbone(cfg):  # 用的是这个
     body = bert_model.BertEncoder(cfg)
     model = nn.Sequential(OrderedDict([("body", body)]))
     return model

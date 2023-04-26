@@ -638,10 +638,10 @@ class ATSSPostProcessor(torch.nn.Module):
         if box_cls is not None:
             #print('Classification.')
             box_cls = permute_and_flatten(box_cls, N, A, C, H, W)
-            box_cls = box_cls.sigmoid()
+            box_cls = box_cls.sigmoid()  # (1,13600,80)
 
         # binary focal loss version
-        if token_logits is not None:
+        if token_logits is not None: # none
             #print('Token.')
             token_logits = permute_and_flatten(token_logits, N, A, T, H, W)
             token_logits = token_logits.sigmoid()
@@ -651,9 +651,9 @@ class ATSSPostProcessor(torch.nn.Module):
             box_cls = scores
 
         # binary dot product focal version
-        if dot_product_logits is not None:
+        if dot_product_logits is not None:  # true
             #print('Dot Product.')
-            dot_product_logits = dot_product_logits.sigmoid()
+            dot_product_logits = dot_product_logits.sigmoid() #(1,136000,80)
             if self.mdetr_style_aggregate_class_num != -1:
                 scores = convert_grounding_to_od_logits_v2(
                     logits=dot_product_logits,
@@ -661,7 +661,7 @@ class ATSSPostProcessor(torch.nn.Module):
                     positive_map=positive_map,
                     score_agg=self.score_agg,
                     disable_minus_one=False)
-            else:
+            else: # ture 核心
                 scores = convert_grounding_to_od_logits(logits=dot_product_logits, box_cls=box_cls,
                                                         positive_map=positive_map,
                                                         score_agg=self.score_agg)
@@ -688,7 +688,7 @@ class ATSSPostProcessor(torch.nn.Module):
             per_box_cls = per_box_cls[per_candidate_inds]
 
             per_box_cls, top_k_indices = per_box_cls.topk(per_pre_nms_top_n, sorted=False)
-
+            # (13600, 80)  -> (n, 2)
             per_candidate_nonzeros = per_candidate_inds.nonzero()[top_k_indices, :]
 
             per_box_loc = per_candidate_nonzeros[:, 0]
@@ -769,12 +769,15 @@ class ATSSPostProcessor(torch.nn.Module):
 
 
 def convert_grounding_to_od_logits(logits, box_cls, positive_map, score_agg=None):
-    scores = torch.zeros(logits.shape[0], logits.shape[1], box_cls.shape[2]).to(logits.device)
+    # 这个 scores 维度是 (1,13600,80)，这个 80 是明显不合理的，这个地方应该是当前句子中 token 的个数
+    # 假设当前句子一共 3 个命名实体，那么这个维度应该是 (1,13600,3)
+    # 虽然结果一样，但是含义就不一样，当某一种图片的实体超过 80 那就会报错了
+    scores = torch.zeros(logits.shape[0], logits.shape[1], box_cls.shape[2]).to(logits.device)  # (1,13600,80)
     # 256 -> 80, average for each class
     if positive_map is not None:
         # score aggregation method
-        if score_agg == "MEAN":
-            for label_j in positive_map:
+        if score_agg == "MEAN":  # ture
+            for label_j in positive_map:  # logits (1,13600,256) 取出对应 token 位置的预测值，然后求均值,将其转换为 80 类的预测值
                 scores[:, :, label_j - 1] = logits[:, :, torch.LongTensor(positive_map[label_j])].mean(-1)
         elif score_agg == "MAX":
             # torch.max() returns (values, indices)

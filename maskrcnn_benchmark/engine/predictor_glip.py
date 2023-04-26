@@ -48,7 +48,7 @@ class GLIPDemo(object):
             checkpointer = DetectronCheckpointer(cfg, self.model, save_dir=save_dir)
             _ = checkpointer.load(cfg.MODEL.WEIGHT)
 
-        self.transforms = self.build_transform()
+        self.transforms = self.build_transform()  # 常规的 800x1333 设置
 
         # used to make colors for each tokens
         mask_threshold = -1 if show_mask_heatmaps else 0.5
@@ -57,7 +57,7 @@ class GLIPDemo(object):
         self.cpu_device = torch.device("cpu")
         self.confidence_threshold = confidence_threshold
 
-        self.tokenizer = self.build_tokenizer()
+        self.tokenizer = self.build_tokenizer()  # BERT
 
     def build_transform(self):
         """
@@ -105,8 +105,12 @@ class GLIPDemo(object):
         return tokenizer
 
     def run_ner(self, caption):
+        # There is two cat and a remote in the picture
+        # 离线的 NER 算法： ['cat', 'a remote', 'the picture']
         noun_phrases = find_noun_phrases(caption)
+        # 移除标点符号
         noun_phrases = [remove_punctuation(phrase) for phrase in noun_phrases]
+        # 最终的实体
         noun_phrases = [phrase for phrase in noun_phrases if phrase != '']
         relevant_phrases = noun_phrases
         labels = noun_phrases
@@ -123,7 +127,8 @@ class GLIPDemo(object):
                 print("noun entities:", noun_phrases)
                 print("entity:", entity)
                 print("caption:", caption.lower())
-
+        # [[[13, 16]], [[21, 29]], [[33, 44]]]
+        # 表示一共有 3 个实体，第一个实体 cat 位于输入句子的 [13:16] 位置，其他类推
         return tokens_positive
 
     def inference(self, original_image, original_caption):
@@ -181,12 +186,12 @@ class GLIPDemo(object):
         image_list = image_list.to(self.device)
         # caption
         if isinstance(original_caption, list):
-            # we directly provided a list of category names
+            # 如果是类别列表，则直接拼接，中间用 ' . ' 区分
             caption_string = ""
             tokens_positive = []
             seperation_tokens = " . "
             for word in original_caption:
-                
+                # 由于一个类别就是一个实体，因此可以直接得到的 positive，无需进行命名实体识别。方便后续还原类别
                 tokens_positive.append([len(caption_string), len(caption_string) + len(word)])
                 caption_string += word
                 caption_string += seperation_tokens
@@ -197,9 +202,18 @@ class GLIPDemo(object):
             original_caption = caption_string
             # print(tokens_positive)
         else:
+            # 假设输入是 There is two cat and a remote in the picture
+            # 将输入文本 token 化，会加入开始和结束符
+            # 编码后长度为 12
             tokenized = self.tokenizer([original_caption], return_tensors="pt")
+            # 如果输入了定制化的名词，则不会进行命名实体识别
             if custom_entity is None:
-                tokens_positive = self.run_ner(original_caption)
+                # 识别文本中的名词，作为类别，并计算对应名词 token 位置
+                # 假设输入是 There is two cat and a remote in the picture
+                # 实体： ['cat', 'a remote', 'the picture']
+                # tokens_positive=[[[13, 16]], [[21, 29]], [[33, 44]]]
+                # 表示一共有 3 个实体，第一个实体 cat 位于输入句子的 [13:16] 位置，其他类推
+                tokens_positive = self.run_ner(original_caption)  # 找到句子中的命名实体
             # print(tokens_positive)
         # process positive map
         positive_map = create_positive_map(tokenized, tokens_positive)
@@ -208,7 +222,8 @@ class GLIPDemo(object):
             plus = 1
         else:
             plus = 0
-
+        # # {1: [4], 2: [6, 7], 3: [9, 10]} 每个 token 对应的在句子 token 化列表中的索引位置
+        # 4：cat  6 7 : a remote 9 10: the picture
         positive_map_label_to_token = create_positive_map_label_to_token_from_positive_map(positive_map, plus=plus)
         self.plus = plus
         self.positive_map_label_to_token = positive_map_label_to_token
@@ -216,12 +231,17 @@ class GLIPDemo(object):
 
         # compute predictions
         with torch.no_grad():
+            # 输入图片，原始文本描述， {1: [4], 2: [6, 7], 3: [9, 10]}
+            # 为何不把 token 传进去？ 这样内部不是又要算一遍？ 这样写的原因是内部他想并行 token 计算
             predictions = self.model(image_list, captions=[original_caption], positive_map=positive_map_label_to_token)
             predictions = [o.to(self.cpu_device) for o in predictions]
         print("inference time per image: {}".format(timeit.time.perf_counter() - tic))
 
         # always single image is passed at a time
-        prediction = predictions[0]
+        prediction = predictions[0]  # BoxList(num_boxes=16, image_width=1066, image_height=800, mode=xyxy)
+        # prediction.extra_fields['labels']: tensor([2, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 2, 1, 3, 1])
+        # 因为最多是 3 个实体，因此这里返回的最大值是 2 + self.plus
+        # 这个 id 和前面的实体名是一一对应的，所以容易解析出类别
 
         # reshape prediction (a BoxList) into the original image size
         height, width = original_image.shape[:-1]
@@ -329,6 +349,7 @@ class GLIPDemo(object):
                 if i <= len(self.entities):
                     new_labels.append(self.entities[i - self.plus])
                 else:
+                    # 如果识别的实例个数 id 比实体总数还多，说明识别除了无法确定类别的物体，直接设置为 object
                     new_labels.append('object')
             # labels = [self.entities[i - self.plus] for i in labels ]
         else:
@@ -345,7 +366,7 @@ class GLIPDemo(object):
                     y -= text_offset
 
             cv2.putText(
-                image, s, (int(x), int(y)-text_offset_original), cv2.FONT_HERSHEY_SIMPLEX, text_size, (self.color, self.color, self.color), text_pixel, cv2.LINE_AA
+                image, s, (int(x), int(y)-text_offset_original), cv2.FONT_HERSHEY_SIMPLEX, text_size, (255, 255, 255), text_pixel, cv2.LINE_AA
             )
             previous_locations.append((int(x), int(y)))
 
@@ -406,16 +427,22 @@ def create_positive_map_label_to_token_from_positive_map(positive_map, plus=0):
     positive_map_label_to_token = {}
     for i in range(len(positive_map)):
         positive_map_label_to_token[i + plus] = torch.nonzero(positive_map[i], as_tuple=True)[0].tolist()
-    return positive_map_label_to_token
+    return positive_map_label_to_token  # {1: [4], 2: [6, 7], 3: [9, 10]}
 
 
 def create_positive_map(tokenized, tokens_positive):
     """construct a map such that positive_map[i,j] = True iff box i is associated to token j"""
-    positive_map = torch.zeros((len(tokens_positive), 256), dtype=torch.float)
+    # 256 意思是输入的任何一个命名实体不能超过 256 token，这个应该不会存在吧
+    # 注意，这里的第一个维度不是句子个数，而是句子中的实体个数
+    positive_map = torch.zeros((len(tokens_positive), 256), dtype=torch.float)  # (3, 256)
 
     for j, tok_list in enumerate(tokens_positive):
         for (beg, end) in tok_list:
             try:
+                # There is two cat and a remote in the picture
+                # token 长度是 12
+                # 假设这个 beg end = 13 16 其实际上是对应 cat 在句子中的位置
+                # char_to_token 可以对应的找到其在 tokenized 的对应偏移位置即 4 和 4 = tokenized[4:4]
                 beg_pos = tokenized.char_to_token(beg)
                 end_pos = tokenized.char_to_token(end - 1)
             except Exception as e:
@@ -423,7 +450,7 @@ def create_positive_map(tokenized, tokens_positive):
                 print("token_positive:", tokens_positive)
                 # print("beg_pos:", beg_pos, "end_pos:", end_pos)
                 raise e
-            if beg_pos is None:
+            if beg_pos is None:  # 啥时候会是 None？
                 try:
                     beg_pos = tokenized.char_to_token(beg + 1)
                     if beg_pos is None:
@@ -441,8 +468,9 @@ def create_positive_map(tokenized, tokens_positive):
                 continue
 
             assert beg_pos is not None and end_pos is not None
+            # 对应的位置值设置为 1，相当于这些位置是命名实体位置
             positive_map[j, beg_pos: end_pos + 1].fill_(1)
-    return positive_map / (positive_map.sum(-1)[:, None] + 1e-6)
+    return positive_map / (positive_map.sum(-1)[:, None] + 1e-6)  # 每个实体 token 归一化，确保每个命名实体 token 响应和为 1
 
 
 def find_noun_phrases(caption: str) -> List[str]:

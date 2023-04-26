@@ -1,0 +1,43 @@
+不能用 pytorch 1.10 及其高版本，因为 maskrcnn_benchamrk 不支持，如果要想成功需要修改不少代码。
+目前用 pytorch1.8 cuda 10.1 gcc5.4
+
+# 本机编译
+export PATH=/usr/local/cuda-10.1/bin/:$PATH
+python setup.py build develop --user
+
+
+pip install nltk
+pip install inflect
+
+export DATASET=/home/PJLAB/huanghaian/dataset/coco
+
+python tools/test_grounding_net.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight glip_a_tiny_o365.pth \
+        TEST.IMS_PER_BATCH 1 \
+        MODEL.DYHEAD.SCORE_AGG "MEAN" \
+        TEST.EVAL_TASK detection \
+        MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS False \
+        OUTPUT_DIR output
+
+# 单机节点 mmdet-sam 环境
+pip install einops shapely timm yacs tensorboardX ftfy prettytable pymongo
+pip install transformers
+python setup.py build develop --user
+
+
+GeneralizedVLRCNN
+
+backbone： Swin-T
+语言模型： BertEncoder
+
+
+GeneralizedVLRCNN
+
+视觉 backbone： SWINT-FPN-RETINANET
+语言模型： BertEncoder
+RPN: 实际上就是 RetinaNet 的 Head 部分 -- VLDYHEAD
+     内部包括了视觉语义模型融合模块 -- dyhead_tower
+
+整体架构类似 RetinaNet，也是 5 个尺度输出，每个尺度就一个 anchor，只不过多了语言模型部分，将其信息融合到视觉模型中。
+
+假设只看 A 模型，则 dyhead_tower 中只包括视觉模型，不会对语言特征进行融合。
+

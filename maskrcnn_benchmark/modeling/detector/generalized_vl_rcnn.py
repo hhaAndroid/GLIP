@@ -75,7 +75,7 @@ class GeneralizedVLRCNN(nn.Module):
         self.cfg = cfg
 
         # visual encoder
-        self.backbone = build_backbone(cfg)
+        self.backbone = build_backbone(cfg)  # Swin-T-FPN-RetinaNet
 
         # language encoder
         if cfg.MODEL.LANGUAGE_BACKBONE.TOKENIZER_TYPE == "clip":
@@ -89,14 +89,14 @@ class GeneralizedVLRCNN(nn.Module):
                 self.tokenizer = CLIPTokenizerFast.from_pretrained("openai/clip-vit-base-patch32",
                                                                             from_slow=True)
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained(cfg.MODEL.LANGUAGE_BACKBONE.TOKENIZER_TYPE)
-        self.tokenizer_vocab = self.tokenizer.get_vocab()
+            self.tokenizer = AutoTokenizer.from_pretrained(cfg.MODEL.LANGUAGE_BACKBONE.TOKENIZER_TYPE)  # bert-base-uncased
+        self.tokenizer_vocab = self.tokenizer.get_vocab()  # token 长度 是 30522
         self.tokenizer_vocab_ids = [item for key, item in self.tokenizer_vocab.items()]
 
-        self.language_backbone = build_language_backbone(cfg)
+        self.language_backbone = build_language_backbone(cfg)  # BERT
 
-        self.rpn = build_rpn(cfg)
-        self.roi_heads = build_roi_heads(cfg)
+        self.rpn = build_rpn(cfg)  # VLDyHeadModule
+        self.roi_heads = build_roi_heads(cfg)  # None, 也就是说这是一个 one-stage算法，上面就是 head
         self.DEBUG = cfg.MODEL.DEBUG
 
         self.freeze_backbone = cfg.MODEL.BACKBONE.FREEZE
@@ -110,9 +110,9 @@ class GeneralizedVLRCNN(nn.Module):
             assert cfg.MODEL.BACKBONE.FREEZE, "For linear probing, backbone should be frozen!"
             if hasattr(self.backbone, 'fpn'):
                 assert cfg.MODEL.FPN.FREEZE, "For linear probing, FPN should be frozen!"
-        self.linear_prob = cfg.MODEL.LINEAR_PROB
-        self.freeze_cls_logits = cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS
-        if cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS:
+        self.linear_prob = cfg.MODEL.LINEAR_PROB # false
+        self.freeze_cls_logits = cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS # True
+        if cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS: # ture
             # disable cls_logits
             if hasattr(self.rpn.head, 'cls_logits'):
                 for p in self.rpn.head.cls_logits.parameters():
@@ -123,8 +123,8 @@ class GeneralizedVLRCNN(nn.Module):
             for p in self.language_backbone.parameters():
                 p.requires_grad = False
         
-        self.use_mlm_loss = cfg.MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS 
-        self.mlm_loss_for_only_positives = cfg.MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS_FOR_ONLY_POSITIVES
+        self.use_mlm_loss = cfg.MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS  # fasle
+        self.mlm_loss_for_only_positives = cfg.MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS_FOR_ONLY_POSITIVES  # true
 
         if self.cfg.GLIPKNOW.KNOWLEDGE_FILE:
             from maskrcnn_benchmark.data.datasets.tsv import load_from_yaml_file
@@ -214,7 +214,7 @@ class GeneralizedVLRCNN(nn.Module):
                                                             padding='max_length' if self.cfg.MODEL.LANGUAGE_BACKBONE.PAD_MAX else "longest",
                                                             return_special_tokens_mask=True,
                                                             return_tensors='pt',
-                                                            truncation=True).to(device)
+                                                            truncation=True).to(device)  # 想并行计算
                 if self.use_mlm_loss:
                     if not self.mlm_loss_for_only_positives:
                         greenlight_map = None
@@ -225,7 +225,7 @@ class GeneralizedVLRCNN(nn.Module):
                         padding_token_id=self.tokenizer.pad_token_id,
                         greenlight_map=greenlight_map)
                 else:
-                    input_ids = tokenized.input_ids
+                    input_ids = tokenized.input_ids  # (1, 256) 每个句子最多 256 个 token
                     mlm_labels = None
                 
                 
@@ -236,20 +236,20 @@ class GeneralizedVLRCNN(nn.Module):
                     with torch.no_grad():
                         language_dict_features = self.language_backbone(tokenizer_input)
                 else:
-                    language_dict_features = self.language_backbone(tokenizer_input)
+                    language_dict_features = self.language_backbone(tokenizer_input)  # 语言模型计算
                 
                 # ONE HOT
-                if self.cfg.DATASETS.ONE_HOT:
+                if self.cfg.DATASETS.ONE_HOT: # false
                     new_masks = torch.zeros_like(language_dict_features['masks'],
                                                 device=language_dict_features['masks'].device)
                     new_masks[:, :self.cfg.MODEL.DYHEAD.NUM_CLASSES] = 1
                     language_dict_features['masks'] = new_masks
 
                 # MASK ALL SPECIAL TOKENS
-                if self.cfg.MODEL.LANGUAGE_BACKBONE.MASK_SPECIAL:
+                if self.cfg.MODEL.LANGUAGE_BACKBONE.MASK_SPECIAL: # false
                     language_dict_features["masks"] = 1 - tokenized.special_tokens_mask
                 
-                language_dict_features["mlm_labels"] = mlm_labels
+                language_dict_features["mlm_labels"] = mlm_labels  # none
 
         # visual embedding
         swint_feature_c4 = None
@@ -265,7 +265,7 @@ class GeneralizedVLRCNN(nn.Module):
             targets = [target.to(device)
                        for target in targets if target is not None]
 
-        if self.force_boxes:
+        if self.force_boxes:  # false
             proposals = []
             for t in targets:
                 tb = t.copy_with_fields(["labels"])
@@ -282,7 +282,7 @@ class GeneralizedVLRCNN(nn.Module):
                 proposal_losses = {('rpn_null_loss', null_loss)}
         else:
             proposals, proposal_losses, fused_visual_features = self.rpn(images, visual_features, targets, language_dict_features, positive_map,
-                                              captions, swint_feature_c4)
+                                              captions, swint_feature_c4) # 核心部分
         if self.roi_heads:
             if self.cfg.MODEL.ROI_MASK_HEAD.PREDICTOR.startswith("VL"):
                 if self.training:

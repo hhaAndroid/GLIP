@@ -234,7 +234,7 @@ class DyConv(torch.nn.Module):
 
 
 class BertEncoderLayer(BertPreTrainedModel):
-    def __init__(self, config,  clamp_min_for_underflow = False, clamp_max_for_overflow = False):
+    def __init__(self, config, clamp_min_for_underflow=False, clamp_max_for_overflow=False):
         super().__init__(config)
         self.config = config
 
@@ -243,7 +243,7 @@ class BertEncoderLayer(BertPreTrainedModel):
 
         from maskrcnn_benchmark.modeling.rpn.modeling_bert import BertAttention, BertIntermediate, BertOutput
 
-        self.attention = BertAttention(config,  clamp_min_for_underflow, clamp_max_for_overflow)
+        self.attention = BertAttention(config, clamp_min_for_underflow, clamp_max_for_overflow)
         self.intermediate = BertIntermediate(config)
         self.output = BertOutput(config)
 
@@ -368,34 +368,34 @@ class VLFuse(torch.nn.Module):
             # single-direction (text->image)
             # text -> image
             self.t2i_attn = AttentionT2I(q_dim=self.joint_embedding_size,
-                                           k_dim=self.lang_dim,
-                                           embed_dim=self.embed_dim,
-                                           num_heads=self.n_head,
-                                           hidden_dim=self.t2i_hidden_dim,
-                                           dropout=0.1,
-                                           drop_path=.0,
-                                           init_values=1.0 / cfg.MODEL.DYHEAD.NUM_CONVS,
-                                           mode="t2i",
-                                           use_layer_scale=cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_LAYER_SCALE,
-                                           clamp_min_for_underflow=cfg.MODEL.DYHEAD.FUSE_CONFIG.CLAMP_MIN_FOR_UNDERFLOW,
-                                           clamp_max_for_overflow=cfg.MODEL.DYHEAD.FUSE_CONFIG.CLAMP_MAX_FOR_OVERFLOW
-                                           )
+                                         k_dim=self.lang_dim,
+                                         embed_dim=self.embed_dim,
+                                         num_heads=self.n_head,
+                                         hidden_dim=self.t2i_hidden_dim,
+                                         dropout=0.1,
+                                         drop_path=.0,
+                                         init_values=1.0 / cfg.MODEL.DYHEAD.NUM_CONVS,
+                                         mode="t2i",
+                                         use_layer_scale=cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_LAYER_SCALE,
+                                         clamp_min_for_underflow=cfg.MODEL.DYHEAD.FUSE_CONFIG.CLAMP_MIN_FOR_UNDERFLOW,
+                                         clamp_max_for_overflow=cfg.MODEL.DYHEAD.FUSE_CONFIG.CLAMP_MAX_FOR_OVERFLOW
+                                         )
 
         elif cfg.MODEL.DYHEAD.FUSE_CONFIG.TYPE == "MHA-B":
             # bi-direction (text->image, image->text)
             self.b_attn = BiAttentionBlockForCheckpoint(v_dim=self.joint_embedding_size,
-                        l_dim=self.lang_dim,
-                        embed_dim=self.embed_dim,
-                        num_heads=self.n_head,
-                        hidden_dim=self.i2t_hidden_dim,
-                        dropout=0.1,
-                        drop_path=.0,
-                        init_values=1.0 / cfg.MODEL.DYHEAD.NUM_CONVS,
-                        cfg=cfg
-                        )
+                                                        l_dim=self.lang_dim,
+                                                        embed_dim=self.embed_dim,
+                                                        num_heads=self.n_head,
+                                                        hidden_dim=self.i2t_hidden_dim,
+                                                        dropout=0.1,
+                                                        drop_path=.0,
+                                                        init_values=1.0 / cfg.MODEL.DYHEAD.NUM_CONVS,
+                                                        cfg=cfg
+                                                        )
             if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.SEPARATE_BIDIRECTIONAL and self.cfg.MODEL.DYHEAD.FUSE_CONFIG.DO_LANG_PROJ_OUTSIDE_CHECKPOINT:
                 self.shrink_lang = FeatureResizer(self.lang_dim * 5,
-                                self.lang_dim, 0.1)
+                                                  self.lang_dim, 0.1)
 
 
         elif cfg.MODEL.DYHEAD.FUSE_CONFIG.TYPE == "SCAN":
@@ -483,13 +483,13 @@ class VLFuse(torch.nn.Module):
         elif self.cfg.MODEL.DYHEAD.FUSE_CONFIG.TYPE == "MHA-B":
             if self.use_checkpoint:
                 q0, q1, q2, q3, q4, l0, l1, l2, l3, l4 = checkpoint.checkpoint(self.b_attn,
-                    visual_features[0], visual_features[1],
-                    visual_features[2], visual_features[3],
-                    visual_features[4],
-                    language_dict_features['hidden'],
-                    language_dict_features['masks'],
-                    self.dummy_tensor
-                )
+                                                                               visual_features[0], visual_features[1],
+                                                                               visual_features[2], visual_features[3],
+                                                                               visual_features[4],
+                                                                               language_dict_features['hidden'],
+                                                                               language_dict_features['masks'],
+                                                                               self.dummy_tensor
+                                                                               )
             else:
                 q0, q1, q2, q3, q4, l0, l1, l2, l3, l4 = self.b_attn(
                     visual_features[0], visual_features[1],
@@ -502,7 +502,7 @@ class VLFuse(torch.nn.Module):
 
             fused_visual_features = [q0, q1, q2, q3, q4]
             if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.SEPARATE_BIDIRECTIONAL and self.cfg.MODEL.DYHEAD.FUSE_CONFIG.DO_LANG_PROJ_OUTSIDE_CHECKPOINT:
-                language_features = self.shrink_lang(torch.cat([l0, l1, l2, l3, l4], dim = -1))
+                language_features = self.shrink_lang(torch.cat([l0, l1, l2, l3, l4], dim=-1))
             else:
                 language_features = l0
 
@@ -570,7 +570,7 @@ class VLDyHead(torch.nn.Module):
             lang_cfg = None
             raise NotImplementedError
 
-        num_classes = cfg.MODEL.DYHEAD.NUM_CLASSES - 1
+        num_classes = cfg.MODEL.DYHEAD.NUM_CLASSES - 1  # 这个值应该不重要，默认是 80
         num_tokens = cfg.MODEL.LANGUAGE_BACKBONE.MAX_QUERY_LEN
         num_anchors = len(cfg.MODEL.RPN.ASPECT_RATIOS) * cfg.MODEL.RPN.SCALES_PER_OCTAVE
         in_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
@@ -596,7 +596,7 @@ class VLDyHead(torch.nn.Module):
 
         dyhead_tower = []
         for i in range(cfg.MODEL.DYHEAD.NUM_CONVS):
-            if cfg.MODEL.DYHEAD.FUSE_CONFIG.EARLY_FUSE_ON:
+            if cfg.MODEL.DYHEAD.FUSE_CONFIG.EARLY_FUSE_ON:  # A  模型没有融合
                 # cross-modality fusion
                 dyhead_tower.append(
                     VLFuse(cfg)
@@ -643,7 +643,7 @@ class VLDyHead(torch.nn.Module):
         self.add_module('dyhead_tower', nn.Sequential(*dyhead_tower))
 
         self.cls_logits = nn.Conv2d(channels, num_anchors * num_classes, kernel_size=1)
-        self.bbox_pred = nn.Conv2d(channels, num_anchors * 4, kernel_size=1)
+        self.bbox_pred = nn.Conv2d(channels, num_anchors * 4, kernel_size=1)  # num_anchors=1
         self.centerness = nn.Conv2d(channels, num_anchors * 1, kernel_size=1)
 
         # initialize the bias for focal loss
@@ -669,9 +669,10 @@ class VLDyHead(torch.nn.Module):
             self.log_scale = nn.Parameter(torch.Tensor([log_scale]), requires_grad=True)
 
         # dot product soft token head
-        if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS:
+        if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS:  # true
             assert self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_CONTRASTIVE_ALIGN_LOSS == False
-            self.dot_product_projection_image = nn.Identity()
+            self.dot_product_projection_image = nn.Identity()  # 视觉特征不需要投影转换
+            # 将语言模型输出进行投影到视觉语义上
             self.dot_product_projection_text = nn.Linear(self.cfg.MODEL.LANGUAGE_BACKBONE.LANG_DIM,
                                                          num_anchors * channels, bias=True)
             self.log_scale = nn.Parameter(torch.Tensor([log_scale]), requires_grad=True)
@@ -718,7 +719,7 @@ class VLDyHead(torch.nn.Module):
                     if isinstance(l, nn.Conv2d):
                         torch.nn.init.normal_(l.weight, std=0.01)
                         torch.nn.init.constant_(l.bias, bias_value)
-        
+
         if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS:
             if cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE == "clip":
                 lang_cfg = BertConfig.from_pretrained("bert-base-uncased")
@@ -726,7 +727,7 @@ class VLDyHead(torch.nn.Module):
                 lang_cfg.vocab_size = cfg.MODEL.CLIP.VOCAB_SIZE
             self.mlm_head = BertLMPredictionHead(
                 lang_cfg
-            ) #nn.Linear(hidden_size, config.vocab_size, bias=False)
+            )  # nn.Linear(hidden_size, config.vocab_size, bias=False)
 
     def forward(self, x, language_dict_features=None, embedding=None, swint_feature_c4=None):
         logits = []
@@ -736,18 +737,20 @@ class VLDyHead(torch.nn.Module):
         feat_inputs = {"visual": x,
                        "lang": language_dict_features}
 
+        # A 模型没有特征融合，内部只是对视觉的5个多尺度特征进行融合，语言特征没有使用
         dyhead_tower = self.dyhead_tower(feat_inputs)
 
         # soft token
         t_logits = None
         if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_TOKEN_LOSS:
             t_logits = []
-        
+
         if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_FUSED_FEATURES_DOT_PRODUCT:
-            embedding = dyhead_tower["lang"]["hidden"]
-        
+            embedding = dyhead_tower["lang"]["hidden"]  # 融合后的语言特征
+            print(language_dict_features['hidden'].sum(), embedding.sum())
+
         # MLM loss
-        if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS:
+        if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS:  # false
             mlm_logits = self.mlm_head(embedding)
         else:
             mlm_logits = None
@@ -755,13 +758,14 @@ class VLDyHead(torch.nn.Module):
         # contrastive
         contrastive_logits = None
         proj_tokens = None
-        if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_CONTRASTIVE_ALIGN_LOSS:
+        if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_CONTRASTIVE_ALIGN_LOSS:  # false
             contrastive_logits = []
             # follow MDETR's way
             proj_tokens = F.normalize(
                 self.contrastive_align_projection_text(embedding), p=2, dim=-1
             )
 
+        # 先将语言特征投影到视觉空间，然后和视觉特征计算相似度
         # dot product soft token
         dot_product_logits = None
         dot_product_proj_tokens = None
@@ -769,12 +773,13 @@ class VLDyHead(torch.nn.Module):
         if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS:
             dot_product_logits = []
             # norm
-            embedding = F.normalize(embedding, p=2, dim=-1)
-            dot_product_proj_tokens = self.dot_product_projection_text(embedding / 2.0)
+            embedding = F.normalize(embedding, p=2, dim=-1)  # text embeding (1,256,768)
+            # 语言特征投影到视觉空间
+            dot_product_proj_tokens = self.dot_product_projection_text(embedding / 2.0)  # (1,256,256)
             # w/o norm
             # dot_product_proj_tokens = self.dot_product_projection_text(embedding / 28.0)
-
-            dot_product_proj_tokens_bias = torch.matmul(embedding, self.bias_lang) + self.bias0
+            # print(embedding.sum(), dot_product_proj_tokens.sum())
+            dot_product_proj_tokens_bias = torch.matmul(embedding, self.bias_lang) + self.bias0  # (1, 256)
 
         # shallow contrastive (original feature from image & text encoder)
         shallow_img_emb_feats = None
@@ -797,15 +802,17 @@ class VLDyHead(torch.nn.Module):
             fused_visual_features = []
 
         # use the feature from FPN
-        for l, feature in enumerate(x):
-            logits.append(self.cls_logits(dyhead_tower["visual"][l]))
+        for l, feature in enumerate(x):  # 可以看出是多尺度预测
+            # 对视觉特征进行正常的分类和回归预测
+            logits.append(self.cls_logits(dyhead_tower["visual"][l]))  # (1,80,100,136)
 
             bbox_pred = self.scales[l](self.bbox_pred(dyhead_tower["visual"][l]))
             bbox_reg.append(bbox_pred)
 
+            # 看来是 FCOS
             centerness.append(self.centerness(dyhead_tower["visual"][l]))
 
-            if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_TOKEN_LOSS:
+            if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_TOKEN_LOSS: # FALSE
                 t_logits.append(self.token_logits(dyhead_tower["visual"][l]))
 
                 # ABLATION
@@ -815,7 +822,7 @@ class VLDyHead(torch.nn.Module):
                 # bias = b.repeat(B, 1, H, W)
                 # t_logits.append(self.token_logits(dyhead_tower["visual"][l] + bias) + self.bias0)
 
-            if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_CONTRASTIVE_ALIGN_LOSS:
+            if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_CONTRASTIVE_ALIGN_LOSS: # FASLE
                 x = dyhead_tower["visual"][l]
                 B, _, H, W = x.shape
                 C = proj_tokens.shape[2]
@@ -827,26 +834,29 @@ class VLDyHead(torch.nn.Module):
                         torch.matmul(normalized_img_emb, normalized_text_emb.transpose(-1, -2)) / self.log_scale.exp())
                 contrastive_logits.append(contrastive_logit)
 
-            if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS:
-                x = dyhead_tower["visual"][l]
+            if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS:  # true
+                x = dyhead_tower["visual"][l]  # 融合后的视觉特征
                 if self.cfg.MODEL.RPN.RETURN_FUSED_FEATURES:
                     fused_visual_features.append(x)
                 B, C, H, W = x.shape
 
                 # add bias (language)
+                # 图像特征作为 query，文本特征作为 key，计算相似度
                 dot_product_proj_queries = self.dot_product_projection_image(x)
-                dot_product_proj_queries = permute_and_flatten(dot_product_proj_queries, B, -1, C, H, W)
+                dot_product_proj_queries = permute_and_flatten(dot_product_proj_queries, B, -1, C, H, W)  # 1,13600,256
 
                 A = dot_product_proj_queries.shape[1]
                 bias = dot_product_proj_tokens_bias.unsqueeze(1).repeat(1, A, 1)
-
-                dot_product_logit = (torch.matmul(dot_product_proj_queries, dot_product_proj_tokens.transpose(-1, -2)) / self.log_scale.exp()) + bias
-                if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.CLAMP_DOT_PRODUCT:
+                # dot_product_proj_tokens 融合后的文本特征 1,13600,256
+                dot_product_logit = (torch.matmul(dot_product_proj_queries, dot_product_proj_tokens.transpose(-1,
+                                                                                                              -2)) / self.log_scale.exp()) + bias
+                # print(x.sum(),dot_product_logit.sum(),dot_product_proj_queries.sum(),dot_product_proj_tokens.sum(),self.log_scale)
+                if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.CLAMP_DOT_PRODUCT:  # ture
                     dot_product_logit = torch.clamp(dot_product_logit, max=50000)
                     dot_product_logit = torch.clamp(dot_product_logit, min=-50000)
-                dot_product_logits.append(dot_product_logit)
+                dot_product_logits.append(dot_product_logit)  # 文本特征和视觉特征的相似度
 
-            if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_SHALLOW_CONTRASTIVE_LOSS:
+            if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_SHALLOW_CONTRASTIVE_LOSS:  # false
                 feat = feature
                 BF, CF, HF, WF = feat.shape
                 shallow_img_emb = permute_and_flatten(feat, BF, -1, CF, HF, WF)
@@ -856,7 +866,7 @@ class VLDyHead(torch.nn.Module):
         if shallow_img_emb_feats is not None and shallow_text_emb is not None:
             # shallow_img_embs = torch.cat(shallow_img_embs, dim=1)
             proj_tokens = shallow_text_emb
-        return logits, bbox_reg, centerness, t_logits, proj_tokens, contrastive_logits, dot_product_logits, mlm_logits, shallow_img_emb_feats, fused_visual_features
+        return logits, bbox_reg, centerness, t_logits, proj_tokens, contrastive_logits, dot_product_logits, mlm_logits, shallow_img_emb_feats, fused_visual_features  # fused_visual_features none
 
 
 class VLDyHeadModule(torch.nn.Module):
@@ -900,29 +910,30 @@ class VLDyHeadModule(torch.nn.Module):
             # resizer needed
             embedding = language_dict_features['embedded']
             embedding = self.resizer(embedding)
-        elif self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS:
+        elif self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS:  # ture
             # no resizer needed
-            embedding = language_dict_features['embedded']
+            embedding = language_dict_features['embedded']  # (1,256,768)
         else:
             embedding = None
 
         if "masks" in language_dict_features:
-            text_masks = language_dict_features["masks"]
+            text_masks = language_dict_features["masks"]  # (1, 256)
         else:
             text_masks = None
-        
-        if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.ADD_LINEAR_LAYER:
+
+        if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.ADD_LINEAR_LAYER:  # false
             embedding = self.tunable_linear.weight[:embedding.size(1), :].unsqueeze(0) + embedding
             language_dict_features['embedded'] = embedding
-            language_dict_features['hidden'] = self.tunable_linear.weight[:embedding.size(1), :].unsqueeze(0) + language_dict_features['hidden']
-
+            language_dict_features['hidden'] = self.tunable_linear.weight[:embedding.size(1), :].unsqueeze(0) + \
+                                               language_dict_features['hidden']
         box_cls, box_regression, centerness, token_logits, \
-        proj_tokens, contrastive_logits, dot_product_logits, mlm_logits, shallow_img_emb_feats, fused_visual_features = self.head(features,
-                                                                        language_dict_features,
-                                                                        embedding,
-                                                                        swint_feature_c4
-                                                                        )
-        anchors = self.anchor_generator(images, features)
+            proj_tokens, contrastive_logits, dot_product_logits, mlm_logits, shallow_img_emb_feats, fused_visual_features = self.head(
+            features,
+            language_dict_features,
+            embedding,
+            swint_feature_c4
+        )
+        anchors = self.anchor_generator(images, features)  # [[1,2,3,4,5]] ,-28 35
 
         if self.training:
             return self._forward_train(box_cls, box_regression, centerness, targets, anchors,
@@ -933,8 +944,8 @@ class VLDyHeadModule(torch.nn.Module):
                                        contrastive_logits,
                                        dot_product_logits,
                                        text_masks,
-                                       mlm_logits = mlm_logits,
-                                       mlm_labels = language_dict_features["mlm_labels"],
+                                       mlm_logits=mlm_logits,
+                                       mlm_labels=language_dict_features["mlm_labels"],
                                        shallow_img_emb_feats=shallow_img_emb_feats,
                                        fused_visual_features=fused_visual_features
                                        )
@@ -980,7 +991,9 @@ class VLDyHeadModule(torch.nn.Module):
         }
 
         if mlm_labels is not None and mlm_logits is not None:
-            losses["mlm_loss"] = nn.CrossEntropyLoss(ignore_index = -100)(mlm_logits.view(-1, mlm_logits.size(-1)), mlm_labels.view(-1)) * self.cfg.MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS_COEF
+            losses["mlm_loss"] = nn.CrossEntropyLoss(ignore_index=-100)(mlm_logits.view(-1, mlm_logits.size(-1)),
+                                                                        mlm_labels.view(
+                                                                            -1)) * self.cfg.MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS_COEF
 
         if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_CLASSIFICATION_LOSS:
             losses["loss_cls"] = loss_box_cls
@@ -1007,11 +1020,11 @@ class VLDyHeadModule(torch.nn.Module):
             assert (box_regression[0].shape[0]) == 1
             positive_map_label_to_token = create_positive_map_label_to_token_from_positive_map(positive_map, plus=1)
             boxes = self.box_selector_train(box_regression, centerness, anchors,
-                                        box_cls,
-                                        token_logits,
-                                        dot_product_logits,
-                                        positive_map=positive_map_label_to_token
-                                        )
+                                            box_cls,
+                                            token_logits,
+                                            dot_product_logits,
+                                            positive_map=positive_map_label_to_token
+                                            )
             train_boxes = []
             for b, t in zip(boxes, targets):
                 tb = t.copy_with_fields(["labels"])
