@@ -41,3 +41,13 @@ RPN: 实际上就是 RetinaNet 的 Head 部分 -- VLDYHEAD
 
 假设只看 A 模型，则 dyhead_tower 中只包括视觉模型，不会对语言特征进行融合。
 
+
+评估
+ln -s /home/PJLAB/huanghaian/dataset/coco1/ coco
+
+python tools/test_grounding_net.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight glip_a_tiny_o365.pth \
+        TEST.IMS_PER_BATCH 1 \
+        MODEL.DYHEAD.SCORE_AGG "MEAN" \
+        TEST.EVAL_TASK detection \
+        MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS False \
+        OUTPUT_DIR aa
