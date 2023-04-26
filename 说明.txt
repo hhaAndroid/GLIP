@@ -52,7 +52,7 @@ python tools/tgrounding_net_test.py --config-file configs/pretrain/glip_A_Swin_T
         TEST.EVAL_TASK detection \
         OUTPUT_DIR aa
 
-python -m torch.distributed.launch --nproc_per_node 8 --world-size 8 tools/tgrounding_net_test.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight /home/huanghaian/glip_a_tiny_o365.pth \
+python -m torch.distributed.launch --nproc_per_node 8 tools/tgrounding_net_test.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight /home/huanghaian/glip_a_tiny_o365.pth \
         TEST.IMS_PER_BATCH 8 \
         TEST.EVAL_TASK detection \
         OUTPUT_DIR aa
