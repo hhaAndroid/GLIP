@@ -308,7 +308,6 @@ class GLIPDemo(object):
     def overlay_boxes(self, image, predictions, alpha=0.5, box_pixel = 3):
         labels = predictions.get_field("labels")
         boxes = predictions.bbox
-        print(boxes)
 
         colors = self.compute_colors_for_labels(labels).tolist()
         new_image = image.copy()
