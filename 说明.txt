@@ -6,7 +6,7 @@ export PATH=/usr/local/cuda-10.1/bin/:$PATH
 python setup.py build develop --user
 
 
-pip install nltk
+pip install nltk inflect
 pip install inflect
 
 export DATASET=/home/PJLAB/huanghaian/dataset/coco
@@ -83,12 +83,20 @@ coco fintune
 
 需要 16 卡，暂时先用 8卡 验证是否正常训练
 
-python -m torch.distributed.launch --nproc_per_node=16 tools/train_net.py \
-       --config-file {config_file} \
+python -m torch.distributed.launch --nproc_per_node=8 tools/train_net.py \
+       --config-file configs/pretrain/glip_A_Swin_T_O365.yaml \
        --skip-test \
-       MODEL.WEIGHT {model_checkpoint} \
+       MODEL.WEIGHT ../../glip_a_tiny_o365.pth \
+       DATASETS.TRAIN '("coco_grounding_train", )' \
+       MODEL.BACKBONE.FREEZE_CONV_BODY_AT -1 SOLVER.IMS_PER_BATCH 16 SOLVER.USE_AMP True SOLVER.MAX_EPOCH 24 TEST.DURING_TRAINING False TEST.IMS_PER_BATCH 8 SOLVER.FIND_UNUSED_PARAMETERS False SOLVER.BASE_LR 0.00001 SOLVER.LANG_LR 0.00001 SOLVER.STEPS \(0.67,0.89\) DATASETS.DISABLE_SHUFFLE True MODEL.DYHEAD.SCORE_AGG "MEAN" TEST.EVAL_TASK detection
+
+python -m torch.distributed.launch --nproc_per_node=16 tools/train_net.py \
+       --config-file configs/pretrain/glip_A_Swin_T_O365.yaml \
+       --skip-test \
+       MODEL.WEIGHT ../../glip_a_tiny_o365.pth \
        DATASETS.TRAIN '("coco_grounding_train", )' \
        MODEL.BACKBONE.FREEZE_CONV_BODY_AT -1 SOLVER.IMS_PER_BATCH 32 SOLVER.USE_AMP True SOLVER.MAX_EPOCH 24 TEST.DURING_TRAINING False TEST.IMS_PER_BATCH 16 SOLVER.FIND_UNUSED_PARAMETERS False SOLVER.BASE_LR 0.00001 SOLVER.LANG_LR 0.00001 SOLVER.STEPS \(0.67,0.89\) DATASETS.DISABLE_SHUFFLE True MODEL.DYHEAD.SCORE_AGG "MEAN" TEST.EVAL_TASK detection
 
 
-
+python tools/train_net.py --config-file configs/pretrain/glip_A_Swin_T_O365_debug.yaml MODEL.WEIGHT glip_a_tiny_o365.pth
+--config-file ../configs/pretrain/glip_A_Swin_T_O365_debug.yaml MODEL.WEIGHT ../glip_a_tiny_o365.pth
