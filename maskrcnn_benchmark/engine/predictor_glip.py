@@ -355,17 +355,17 @@ class GLIPDemo(object):
             new_labels = ['object' for i in labels]
         boxes = predictions.bbox
 
-        template = "{}:{:.2f}"
+        template = "{}:{:.1f}"
         previous_locations = []
         for box, score, label in zip(boxes, scores, new_labels):
             x, y = box[:2]
-            s = template.format(label, score).replace("_", " ").replace("(", "").replace(")", "")
+            s = template.format(label, score*100).replace("_", " ").replace("(", "").replace(")", "")
             for x_prev, y_prev in previous_locations:
                 if abs(x - x_prev) < abs(text_offset) and abs(y - y_prev) < abs(text_offset):
                     y -= text_offset
 
             cv2.putText(
-                image, s, (int(x), int(y)-text_offset_original), cv2.FONT_HERSHEY_SIMPLEX, text_size, (255, 255, 255), text_pixel, cv2.LINE_AA
+                image, s, (int(x), int(y)-text_offset_original), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), text_pixel, cv2.LINE_AA
             )
             previous_locations.append((int(x), int(y)))
 

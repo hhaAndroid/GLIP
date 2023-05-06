@@ -33,8 +33,10 @@ def imsave(img, path):
 
 # config_file = "configs/pretrain/glip_Swin_T_O365_GoldG.yaml"
 # weight_file = "glip_tiny_model_o365_goldg_cc_sbu.pth"
-config_file = "configs/pretrain/glip_A_Swin_T_O365.yaml"
-weight_file = "glip_a_tiny_o365.pth"
+# config_file = "configs/pretrain/glip_A_Swin_T_O365.yaml"
+# weight_file = "glip_a_tiny_o365.pth"
+config_file = "configs/pretrain/glip_Swin_T_O365.yaml"
+weight_file = "glip_tiny_model_o365.pth"
 
 cfg.local_rank = 0
 cfg.num_gpus = 1
@@ -48,8 +50,12 @@ glip_demo = GLIPDemo(
     confidence_threshold=0.7,
     show_mask_heatmaps=False
 )
-image = load('cat_remote.jpg')
-caption = 'There is two cat and a remote in the picture'
+print(glip_demo.model)
+# image = load('cat_remote.jpg')
+# caption = 'There is two cat and a remote in the picture'
+
+image = load('demo.jpg')
+caption = 'There are a lot of cars here.'
 result, _ = glip_demo.run_on_web_image(image, caption, 0.5)
 imsave(result, 'cat_remote_pred.jpg')
 

@@ -596,7 +596,7 @@ class VLDyHead(torch.nn.Module):
 
         dyhead_tower = []
         for i in range(cfg.MODEL.DYHEAD.NUM_CONVS):
-            if cfg.MODEL.DYHEAD.FUSE_CONFIG.EARLY_FUSE_ON:  # A  模型没有融合
+            if cfg.MODEL.DYHEAD.FUSE_CONFIG.EARLY_FUSE_ON:  # A  模型没有融合 B 模型融合了
                 # cross-modality fusion
                 dyhead_tower.append(
                     VLFuse(cfg)

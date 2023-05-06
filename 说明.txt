@@ -45,9 +45,12 @@ RPN: 实际上就是 RetinaNet 的 Head 部分 -- VLDYHEAD
 评估
 ln -s /home/PJLAB/huanghaian/dataset/coco1/ coco
 
-python tools/tgrounding_net_test.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight glip_a_tiny_o365.pth OUTPUT_DIR aa
+python tools/grounding_net_test.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight glip_a_tiny_o365.pth OUTPUT_DIR aa
+python tools/grounding_net_test.py --config-file configs/pretrain/glip_Swin_T_O365.yaml --weight glip_tiny_model_o365.pth OUTPUT_DIR aa
 
-python tools/tgrounding_net_test.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight /home/huanghaian/glip_a_tiny_o365.pth \
+--config-file ../configs/pretrain/glip_Swin_T_O365.yaml --weight ../glip_tiny_model_o365.pth OUTPUT_DIR aa
+
+python tools/grounding_net_test.py --config-file configs/pretrain/glip_A_Swin_T_O365.yaml --weight /home/huanghaian/glip_a_tiny_o365.pth \
         TEST.IMS_PER_BATCH 1 \
         TEST.EVAL_TASK detection \
         OUTPUT_DIR aa
@@ -69,4 +72,23 @@ python -m torch.distributed.launch --nproc_per_node 8 tools/grounding_net_test.p
  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.477
  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.692
  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.790
+
+
+['person. bicycle. car. motorcycle. airplane. bus. train. truck. boat. traffic light. fire hydrant. stop sign. parking meter. bench. bird. cat. dog. horse. sheep. cow. elephant. bear. zebra. giraffe. backpack. umbrella. handbag. tie. suitcase. frisbee. skis. snowboard. sports ball. kite. baseball bat. baseball glove. skateboard. surfboard. tennis racket. bottle. wine glass. cup. fork. knife. spoon. bowl. banana. apple. sandwich. orange. broccoli. carrot. hot dog. pizza. donut. cake. chair. couch. potted plant. bed. dining table. toilet. tv. laptop. mouse. remote. keyboard. cell phone. microwave. oven. toaster. sink. refrigerator. book. clock. vase. scissors. teddy bear. hair drier. toothbrush']
+captions
+
+
+
+coco fintune
+
+需要 16 卡，暂时先用 8卡 验证是否正常训练
+
+python -m torch.distributed.launch --nproc_per_node=16 tools/train_net.py \
+       --config-file {config_file} \
+       --skip-test \
+       MODEL.WEIGHT {model_checkpoint} \
+       DATASETS.TRAIN '("coco_grounding_train", )' \
+       MODEL.BACKBONE.FREEZE_CONV_BODY_AT -1 SOLVER.IMS_PER_BATCH 32 SOLVER.USE_AMP True SOLVER.MAX_EPOCH 24 TEST.DURING_TRAINING False TEST.IMS_PER_BATCH 16 SOLVER.FIND_UNUSED_PARAMETERS False SOLVER.BASE_LR 0.00001 SOLVER.LANG_LR 0.00001 SOLVER.STEPS \(0.67,0.89\) DATASETS.DISABLE_SHUFFLE True MODEL.DYHEAD.SCORE_AGG "MEAN" TEST.EVAL_TASK detection
+
+
 
